@@ -2,35 +2,60 @@ extern crate ring;
 
 use std::collections::HashMap;
 use std::convert::AsRef;
-use std::fmt::Display;
 use std::hash::Hash;
 use std::mem;
 
 use ring::digest::{Algorithm, Context, Digest};
 
-pub struct MerkleTree<T> {
+pub struct MerkleTree {
     array: Vec<u8>,
     height: usize,
-    map: HashMap<T, usize>,
+    items_count: usize,
+    map: Option<HashMap<Vec<u8>, usize>>,
     algo: &'static Algorithm,
 }
 
-impl<T: Eq + Hash + Clone + Display + AsRef<[u8]>> MerkleTree<T> {
-    pub fn new(values: &Vec<T>, algo: &'static Algorithm) -> MerkleTree<T> {
-        let (h, a) = build_tree(values, algo);
+impl MerkleTree {
+    pub fn new<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm) -> MerkleTree {
+        Self::new_internal(values, algo, false)
+    }
+
+    pub fn new_with_map<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm) -> MerkleTree {
+        Self::new_internal(values, algo, true)
+    }
+
+    fn new_internal<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map: bool) -> MerkleTree {
+        let (height, array, map) = build_tree(values, algo, use_map);
         MerkleTree {
-            array: a,
-            height: h,
-            map: map_items(values),
+            array: array,
+            height: height,
+            items_count: values.len(),
+            map: map,
             algo: algo,
         }
     }
 
-    pub fn build_proof(&self, value: &T) -> Option<Vec<&[u8]>> {
-        match self.map.get(value) {
-            None => None,
-            Some(v) => {
-                Some(self.add_level(0, *v, self.map.len(), vec![]))
+    pub fn build_proof<T: Eq + Hash + AsRef<[u8]>>(&self, value: &T) -> Option<Vec<&[u8]>> {
+        let hash = get_hash(value.as_ref(), self.algo).as_ref().to_vec();
+        match self.map {
+            Some(ref m) => { // if we have a map of items
+                match m.get(&hash) {
+                    None => None,
+                    Some(index) => {
+                        Some(self.add_level(0, *index, self.items_count, vec![]))
+                    }
+                }
+            }
+            None => { // linear search item in a loop
+                'items_loop: for index in 0..self.items_count {
+                    for byte in 0..self.algo.output_len {
+                        if self.array[index * self.algo.output_len + byte] != hash[byte] {
+                            continue 'items_loop;
+                        }
+                    }
+                    return Some(self.add_level(0, index, self.items_count, vec![]));
+                }
+                None
             }
         }
     }
@@ -53,7 +78,7 @@ impl<T: Eq + Hash + Clone + Display + AsRef<[u8]>> MerkleTree<T> {
     }
 
     pub fn get_root(&self) -> &[u8] {
-        if (self.is_empty()) {
+        if self.is_empty() {
             return &[];
         }
         let root_index = self.array.len() - self.algo.output_len;
@@ -72,7 +97,7 @@ impl<T: Eq + Hash + Clone + Display + AsRef<[u8]>> MerkleTree<T> {
         self.height
     }
 
-    pub fn validate(&self, value: T, proof: Vec<&[u8]>, root: &[u8]) -> bool {
+    pub fn validate<T: AsRef<[u8]>>(&self, value: T, proof: Vec<&[u8]>, root: &[u8]) -> bool {
         proof.iter()
             .fold(
                 get_hash(value.as_ref(), self.algo),
@@ -92,21 +117,20 @@ fn calculate_relatives(index: usize) -> (usize, usize) {
     (sibling, parent)
 }
 
-fn map_items<T: Eq + Hash + Clone>(values: &Vec<T>) -> HashMap<T, usize> {
-    let mut result: HashMap<T, usize> = HashMap::new();
-    for (i, x) in values.iter().enumerate() {
-        result.insert(x.clone(), i);
-    }
-    result
-}
-
-fn build_tree<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm) -> (usize, Vec<u8>) {
+fn build_tree<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map: bool) -> (usize, Vec<u8>, Option<HashMap<Vec<u8>, usize>>) {
+    let mut map: Option<HashMap<Vec<u8>, usize>> = if use_map { Some(HashMap::new()) } else { None };
     let mut tree: Vec<u8> = vec![];
-    for v in values { //Hash leafs
-        tree.extend_from_slice(get_hash(v.as_ref(), algo).as_ref());
+    for (i, v) in values.iter().enumerate() { //Hash leafs
+        let digest = get_hash(v.as_ref(), algo);
+        let hash = digest.as_ref();
+        tree.extend_from_slice(hash);
+        match map {
+            Some(ref mut m) => m.insert(hash.to_vec(), i),
+            None => None,
+        };
     }
     let height = build_level(&mut tree, 0, values.len(), algo);
-    (height, tree)
+    (height, tree, map)
 }
 
 fn build_level(tree: &mut Vec<u8>, prev_level_start: usize, mut prev_level_len: usize, algo: &'static Algorithm) -> usize {
@@ -130,7 +154,7 @@ fn build_level(tree: &mut Vec<u8>, prev_level_start: usize, mut prev_level_len: 
     if level_len > 1 {
         return build_level(tree, prev_level_start + prev_level_len, level_len, algo) + 1;
     }
-    if (level_len > 0) {
+    if level_len > 0 {
         return 2;
     }
     return 0;
