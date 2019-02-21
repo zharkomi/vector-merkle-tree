@@ -89,6 +89,10 @@ impl MerkleTree {
         self.array.len() / self.algo.output_len
     }
 
+    pub fn leafs_count(&self) -> usize {
+        self.items_count
+    }
+
     pub fn data_size(&self) -> usize {
         self.array.len()
     }
