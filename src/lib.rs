@@ -17,14 +17,14 @@ pub struct MerkleTree {
 
 impl MerkleTree {
     pub fn new<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm) -> MerkleTree {
-        Self::new_internal(values, algo, false)
+        Self::new_with_flag(values, algo, false)
     }
 
     pub fn new_with_map<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm) -> MerkleTree {
-        Self::new_internal(values, algo, true)
+        Self::new_with_flag(values, algo, true)
     }
 
-    fn new_internal<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map: bool) -> MerkleTree {
+    pub fn new_with_flag<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map: bool) -> MerkleTree {
         let (height, array, map) = build_tree(values, algo, use_map);
         MerkleTree {
             array: array,
@@ -123,7 +123,8 @@ fn calculate_relatives(index: usize) -> (usize, usize) {
 
 fn build_tree<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map: bool) -> (usize, Vec<u8>, Option<HashMap<Vec<u8>, usize>>) {
     let mut map: Option<HashMap<Vec<u8>, usize>> = if use_map { Some(HashMap::new()) } else { None };
-    let mut tree: Vec<u8> = vec![];
+    let vec_len = calculate_vec_len(values.len(), algo);
+    let mut tree: Vec<u8> = Vec::with_capacity(vec_len);
     for (i, v) in values.iter().enumerate() { //Hash leafs
         let digest = get_hash(v.as_ref(), algo);
         let hash = digest.as_ref();
@@ -135,6 +136,17 @@ fn build_tree<T: AsRef<[u8]>>(values: &Vec<T>, algo: &'static Algorithm, use_map
     }
     let height = build_level(&mut tree, 0, values.len(), algo);
     (height, tree, map)
+}
+
+fn calculate_vec_len(len: usize, algo: &'static Algorithm) -> usize {
+    let mut result = len + (len & 1);
+    let mut level = result;
+    while level > 1 {
+        level += level & 1;
+        level = level / 2;
+        result += level;
+    }
+    result * algo.output_len
 }
 
 fn build_level(tree: &mut Vec<u8>, prev_level_start: usize, mut prev_level_len: usize, algo: &'static Algorithm) -> usize {
