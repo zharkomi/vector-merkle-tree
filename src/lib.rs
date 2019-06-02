@@ -37,25 +37,37 @@ impl MerkleTree {
 
     pub fn build_proof<T: Eq + Hash + AsRef<[u8]>>(&self, value: &T) -> Option<Vec<&[u8]>> {
         let hash = get_hash(value.as_ref(), self.algo).as_ref().to_vec();
+        let index = self.find_item(&hash);
+        let mut vec = vec![];
+        match index {
+            Some(i) => {
+                vec.push(&self.array[(i * self.algo.output_len)..(i * self.algo.output_len + self.algo.output_len)]);
+                Some(self.add_level(0, i, self.items_count, vec))
+            }
+            None => None
+        }
+    }
+
+    fn find_item(&self, hash: &Vec<u8>) -> Option<usize> {
         match self.map {
             Some(ref m) => { // if we have a map of items
-                match m.get(&hash) {
+                match m.get(hash) {
                     None => None,
                     Some(index) => {
-                        Some(self.add_level(0, *index, self.items_count, vec![]))
+                        Some(*index)
                     }
                 }
             }
             None => { // linear search item in a loop
-                'items_loop: for index in 0..self.items_count {
-                    for byte in 0..self.algo.output_len {
-                        if self.array[index * self.algo.output_len + byte] != hash[byte] {
-                            continue 'items_loop;
-                        }
+                let mut result = None;
+                for index in 0..self.items_count {
+                    let start = index * self.algo.output_len;
+                    if hash.as_slice() == &self.array[start..(start + self.algo.output_len)] {
+                        result = Some(index);
+                        break;
                     }
-                    return Some(self.add_level(0, index, self.items_count, vec![]));
                 }
-                None
+                result
             }
         }
     }
@@ -101,12 +113,12 @@ impl MerkleTree {
         self.height
     }
 
-    pub fn validate<T: AsRef<[u8]>>(&self, value: T, proof: Vec<&[u8]>, root: &[u8]) -> bool {
-        proof.iter()
+    pub fn validate(&self, proof: &Vec<&[u8]>) -> bool {
+        proof[2..].iter()
             .fold(
-                get_hash(value.as_ref(), self.algo),
-                |a, b| get_pair_hash(a.as_ref(), b, self.algo),
-            ).as_ref().to_vec() == root
+                get_pair_hash(proof[0], proof[1], self.algo),
+                |a, b| get_pair_hash(a.as_ref(), b, self.algo)
+            ).as_ref() == self.get_root()
     }
 }
 
