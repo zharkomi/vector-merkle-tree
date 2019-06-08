@@ -8,7 +8,7 @@ This is tree implementation for Rust language. Key features:
 hash(Hash0,Hash1) = hash(Hash1,Hash0) = Hash01 
 ```
 
-##Usage example
+## Usage example
 
 ```rust
 {
