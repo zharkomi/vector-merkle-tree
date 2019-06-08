@@ -27,8 +27,8 @@ macro_rules! test_tree {
             let values = vec!["one"];
             let tree = MerkleTree::$constructor(&values, ALGO);
 
-            let _d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
-            let _pair = vmt::get_pair_hash(_d0.as_ref(), _d0.as_ref(), ALGO);
+            let d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
+            let _pair = vmt::get_pair_hash(d0.as_ref(), d0.as_ref(), ALGO);
 
             assert_eq!(false, tree.is_empty());
             assert_eq!(2, tree.height());
@@ -42,10 +42,10 @@ macro_rules! test_tree {
             let values = vec!["one", "two"];
             let tree = MerkleTree::$constructor(&values, ALGO);
 
-            let _d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
-            let _d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
+            let d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
+            let d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
 
-            let _pair = vmt::get_pair_hash(_d0.as_ref(), _d1.as_ref(), ALGO);
+            let _pair = vmt::get_pair_hash(d0.as_ref(), d1.as_ref(), ALGO);
 
             assert_eq!(false, tree.is_empty());
             assert_eq!(2, tree.height());
@@ -70,14 +70,14 @@ macro_rules! test_tree {
             let values = vec!["one", "two", "four"];
             let tree = MerkleTree::$constructor(&values, ALGO);
 
-            let _d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
-            let _d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
-            let _d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
-            let _d3: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
+            let d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
+            let d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
+            let d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
+            let d3: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
 
-            let _d01 = hash_pair(_d0.as_ref(), _d1.as_ref(), ALGO);
-            let _d32 = hash_pair(_d2.as_ref(), _d3.as_ref(), ALGO);
-            let _pair = vmt::get_pair_hash(_d32.as_ref(), _d01.as_ref(), ALGO);
+            let d01 = hash_pair(d0.as_ref(), d1.as_ref(), ALGO);
+            let d32 = hash_pair(d2.as_ref(), d3.as_ref(), ALGO);
+            let _pair = vmt::get_pair_hash(d32.as_ref(), d01.as_ref(), ALGO);
 
             assert_eq!(false, tree.is_empty());
             assert_eq!(3, tree.height());
@@ -91,14 +91,14 @@ macro_rules! test_tree {
             let values = vec!["one", "two", "four", "three"];
             let tree = MerkleTree::$constructor(&values, ALGO);
 
-            let _d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
-            let _d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
-            let _d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
-            let _d3: Digest = vmt::get_hash(values[3].as_ref(), ALGO);
+            let d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
+            let d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
+            let d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
+            let d3: Digest = vmt::get_hash(values[3].as_ref(), ALGO);
 
-            let _d01 = hash_pair(_d0.as_ref(), _d1.as_ref(), ALGO);
-            let _d32 = hash_pair(_d2.as_ref(), _d3.as_ref(), ALGO);
-            let _pair = vmt::get_pair_hash(_d32.as_ref(), _d01.as_ref(), ALGO);
+            let d01 = hash_pair(d0.as_ref(), d1.as_ref(), ALGO);
+            let d32 = hash_pair(d2.as_ref(), d3.as_ref(), ALGO);
+            let _pair = vmt::get_pair_hash(d32.as_ref(), d01.as_ref(), ALGO);
 
             assert_eq!(false, tree.is_empty());
             assert_eq!(3, tree.height());
@@ -123,14 +123,14 @@ macro_rules! test_tree {
             let values = vec!["one", "one", "one", "one"];
             let tree = MerkleTree::$constructor(&values, ALGO);
 
-            let _d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
-            let _d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
-            let _d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
-            let _d3: Digest = vmt::get_hash(values[3].as_ref(), ALGO);
+            let d0: Digest = vmt::get_hash(values[0].as_ref(), ALGO);
+            let d1: Digest = vmt::get_hash(values[1].as_ref(), ALGO);
+            let d2: Digest = vmt::get_hash(values[2].as_ref(), ALGO);
+            let d3: Digest = vmt::get_hash(values[3].as_ref(), ALGO);
 
-            let _d01 = hash_pair(_d0.as_ref(), _d1.as_ref(), ALGO);
-            let _d32 = hash_pair(_d2.as_ref(), _d3.as_ref(), ALGO);
-            let _pair = vmt::get_pair_hash(_d32.as_ref(), _d01.as_ref(), ALGO);
+            let d01 = hash_pair(d0.as_ref(), d1.as_ref(), ALGO);
+            let d32 = hash_pair(d2.as_ref(), d3.as_ref(), ALGO);
+            let _pair = vmt::get_pair_hash(d32.as_ref(), d01.as_ref(), ALGO);
 
             assert_eq!(false, tree.is_empty());
             assert_eq!(3, tree.height());
@@ -148,7 +148,7 @@ macro_rules! test_tree {
                 let proof = tree.build_proof(&v);
                 assert_eq!(true, proof.is_some());
                 let vec = proof.unwrap();
-                assert_eq!(3, vec.len());
+                assert_eq!(3 * ALGO.output_len, vec.len());
                 tree.validate(&vec);
             }
 
@@ -166,10 +166,9 @@ macro_rules! test_tree {
             let proof = tree.build_proof(&"one");
 
             assert_eq!(true, proof.is_some());
-            let _d0: Digest = vmt::get_hash("five".as_ref(), ALGO);
-            let proof_vec = proof.unwrap();
-            let vec = vec![proof_vec[0], proof_vec[1], _d0.as_ref()];
-            assert_eq!(false, tree.validate(&vec));
+            let mut proof_vec = proof.unwrap();
+            proof_vec[100] += 1;
+            assert_eq!(false, tree.validate(&proof_vec));
         }
 
         fn hash_pair(x: &[u8], y: &[u8], algo: &'static Algorithm) -> Digest {

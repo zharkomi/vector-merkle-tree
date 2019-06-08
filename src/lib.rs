@@ -35,13 +35,13 @@ impl MerkleTree {
         }
     }
 
-    pub fn build_proof<T: Eq + Hash + AsRef<[u8]>>(&self, value: &T) -> Option<Vec<&[u8]>> {
+    pub fn build_proof<T: Eq + Hash + AsRef<[u8]>>(&self, value: &T) -> Option<Vec<u8>> {
         let hash = get_hash(value.as_ref(), self.algo).as_ref().to_vec();
         let index = self.find_item(&hash);
         let mut vec = vec![];
         match index {
             Some(i) => {
-                vec.push(&self.array[(i * self.algo.output_len)..(i * self.algo.output_len + self.algo.output_len)]);
+                vec.extend_from_slice(&self.array[(i * self.algo.output_len)..(i * self.algo.output_len + self.algo.output_len)]);
                 Some(self.add_level(0, i, self.items_count, vec))
             }
             None => None
@@ -72,10 +72,10 @@ impl MerkleTree {
         }
     }
 
-    fn add_level<'a>(&'a self, start_index: usize, index: usize, mut level_len: usize, mut result: Vec<&'a [u8]>) -> Vec<&'a [u8]> {
+    fn add_level(&self, start_index: usize, index: usize, mut level_len: usize, mut result: Vec<u8>) -> Vec<u8> {
         level_len += level_len & 1;
         let (sibling, parent) = calculate_relatives(index);
-        result.push(&self.array[
+        result.extend_from_slice(&self.array[
             (start_index + sibling * self.algo.output_len)..(start_index + sibling * self.algo.output_len + self.algo.output_len)
             ]); //Add sibling to result
         let next_level_len = level_len / 2;
@@ -113,12 +113,16 @@ impl MerkleTree {
         self.height
     }
 
-    pub fn validate(&self, proof: &Vec<&[u8]>) -> bool {
-        proof[2..].iter()
-            .fold(
-                get_pair_hash(proof[0], proof[1], self.algo),
-                |a, b| get_pair_hash(a.as_ref(), b, self.algo)
-            ).as_ref() == self.get_root()
+    pub fn validate(&self, proof: &Vec<u8>) -> bool {
+        let mut hash = get_pair_hash(self.get_slice(proof, 0), self.get_slice(proof, 1), self.algo);
+        for i in 2..(proof.len() / self.algo.output_len) {
+            hash = get_pair_hash(hash.as_ref(), self.get_slice(proof, i), self.algo);
+        }
+        hash.as_ref() == self.get_root()
+    }
+
+    fn get_slice<'a>(&self, vec: &'a Vec<u8>, i: usize) -> &'a [u8] {
+        &vec[(i * self.algo.output_len)..(i * self.algo.output_len + self.algo.output_len)]
     }
 }
 
